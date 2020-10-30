@@ -1,0 +1,119 @@
+# Part B. Scraping data with RSelenium (30 points)
+
+Name:Brooke
+
+In this part of the assignment, we will scrape some data with RSelenium. We will collect posts from the [LSE jobs website](https://jobs.lse.ac.uk/), in detail from the [exernal vacancies](https://jobs.lse.ac.uk/LoginV2.aspx?enc=vDVLPY6BrOnmx9szwB5icMU/Bp97ap1BlI/jb0LhRYVeoh/cn5bYgvW+9EbbSw7a).
+
+Load all packages in the code cell below that you use in this part of the assignment:
+
+```{r}
+library(RSelenium)
+```
+
+Create the driver object (this should launch a browser window e.g. in Firefox):
+
+```{r}
+rD <- rsDriver(browser=c("firefox"))
+driver <- rD$client
+```
+
+1. The goal is to scrape the job titles of ads and store them in a list. In this example, there is actually a way to avoid having to click through the pages of the [exernal vacancies](https://jobs.lse.ac.uk/LoginV2.aspx?enc=vDVLPY6BrOnmx9szwB5icMU/Bp97ap1BlI/jb0LhRYVeoh/cn5bYgvW+9EbbSw7a). Namely there is a drop-down menu at the end of the table where you can select how many ads should be displayed on one page. Selecting a high number here, e.g. 50, ensures that all jobs are shown on a single page and no clicking to reach the next page is necessary. This first exercise will be about automating the use of the drop-down menu. This can be done with the following approach (write all code for 1.1 - 1.3 into a single cell which you can run repeatedly to see in your browser whether it works):
+
+1.1 Use the driver to navigate to the URL "https://jobs.lse.ac.uk/LoginV2.aspx?enc=vDVLPY6BrOnmx9szwB5icMU/Bp97ap1BlI/jb0LhRYVeoh/cn5bYgvW+9EbbSw7a", and make the script pause for 5 seconds with the `Sys.sleep()` function to be sure the page is loaded properly. (5 points)
+
+1.2 Find the arrow on the right hand side of the drop-down menu with the driver's function `findElement()` (you can find the XPath of this arrow with your browser's inspect function) and click on it with the `clickElement()` function. Make the code pause for 2 seconds with `Sys.sleep()` afterwards. (5 points)
+
+1.3 Now that the drop-down menu has been clicked on in step 1.2, find the element which contains the 50 with `findElement()` (you can find the XPath with the browser's inspect function _after_ opening the drop-down menu yourself) and then click on it with `clickElement()`. Enter another time interval of 5 seconds at the end of the cell with `Sys.sleep()` to make sure it is finished before the next cell is subsequently executed in the second exercise of this file. (5 points)
+
+The code cell below should now navigate to the site, click on the drop down menu, and then click on the 50. After a few seconds, the page in your browser should then display all job ads.
+
+```{r}
+
+# 1. Navigating to the URL
+url <- "https://jobs.lse.ac.uk/LoginV2.aspx?enc=vDVLPY6BrOnmx9szwB5icMU/Bp97ap1BlI/jb0LhRYVeoh/cn5bYgvW+9EbbSw7a"
+driver$navigate(url)
+Sys.sleep(5)
+# 2. Clicking the drop-down menu
+drop_down <- driver$findElement(using = "xpath", value = "//*[@id='ctl00_CPH1_vcyS_vsGrid_ctl00_ctl03_ctl01_PageSizeComboBox_Input']")
+#to confirm that we have selected the correct element
+drop_down$highlightElement()
+drop_down$clickElement()
+Sys.sleep(2)
+
+# 3. Selecting 50
+drop_down_50 <- driver$findElement(using = "xpath", value = "//*[@id='ctl00_CPH1_vcyS_vsGrid_ctl00_ctl03_ctl01_PageSizeComboBox_DropDown']/div/ul/li[4]")
+drop_down_50$highlightElement()
+drop_down_50$clickElement()
+Sys.sleep(5)
+
+
+```
+
+2. Now that all jobs are displayed on one page, scrape the first 10 job titles contained in the "Vacancy Name" column (no need to collect any information from the other columns) and store the titles in a list. To achieve this, first find the pattern in the XPaths of these job titles entries. Inspect the first couple of job titles with your browser, copy the XPath and look for the regularity. Then complete the following loop to find all the job title elements and to store them in a list (you can use the `sprintf()` function similarly to the guided coding session to create the XPaths). After the loop is done, print the list as the final outcome. This list should contain the first 10 job titles visible on the page. (10 points)
+
+```{r}
+#creates an empty list
+job_title_list <- list()
+#assign number one to item count
+item_count <- 1
+#first XPATH 
+#//*[@id="ctl00_CPH1_vcyS_vsGrid_ctl00_ctl04_VacancyTitleLabel"]
+#//*[@id='ctl00_CPH1_vcyS_vsGrid_ctl00_ct104_VacancyTitleLabel']
+#second XPATH //*[@id="ctl00_CPH1_vcyS_vsGrid_ctl00_ctl07_VacancyTitleLabel"]
+#XPaths increment by 3, so the code runs from 04 to 31, incrementing by 3
+
+for (i in seq(from = 4,to = 31, by = 3)) {
+  if (i < 10) {
+    iv <- paste0("0",i)
+  } else{
+    iv <- i
+  }
+  # Create the XPath (using i) - some lines of code might be required
+  #job_XPath <- paste0("//*[@id='ctl00_CPH1_vcyS_vsGrid_ctl00_ctl",i,"_VacancyTitleLabel']")
+
+  # Find the element on the website and transform it to text directly
+  
+ current_job_title <- driver$findElement(using = "xpath",
+                                             value = paste0("//*[@id='ctl00_CPH1_vcyS_vsGrid_ctl00_ctl",iv,"_VacancyTitleLabel']"))$getElementText()[[1]]
+
+  
+  # Add the outcome to the list
+  job_title_list[[item_count]] <- current_job_title
+  item_count <- item_count + 1
+}
+
+print(job_title_list)
+
+```
+
+3. If we wanted to scrape all items rather than just the first 10, we could e.g. build a loop that stops running in an ordered fashion as soon as an error occurs (i.e. as soon as we try an XPath that does not find an associated node/item anymore because the integer is too high). The following structure is an example of how it is possible to try a code block and then switch to a different code block if an error occurred. You can see this when running the cell below. Describe briefly in a few sentences (no coding required!), how we could combine the code discussed before with such a logic in order to not only scrape the first 10 elements but all elements on a page and stop a loop automatically as soon as we have reached the last element. (5 points)
+
+```{r}
+
+some_flag <- tryCatch({ # Part which tries a block of code
+    
+     
+      print("This print statement is fine")
+      print("This print statement will raise an error" + 42)
+     
+   
+    }, error = function(e) { # Part that is executed if previous part returned an error
+
+      print("There was an error in the code above, we reached this block of code.")
+      return(TRUE)
+      
+    })
+
+
+```
+
+[Your answer here in normal text.]
+
+
+Closing the driver and browser at the end of the markdown file:
+
+```{r}
+driver$close()
+rD$server$stop()
+```
+
